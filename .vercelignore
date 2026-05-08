@@ -1,0 +1,11 @@
+.git
+.gitignore
+.omc
+firebase
+firebase.json
+tests
+progress.txt
+PRD.md
+node_modules
+.DS_Store
+*.log

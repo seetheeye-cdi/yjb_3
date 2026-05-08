@@ -3,6 +3,7 @@
 Chrome 오프라인 공룡 게임의 웹 복제판 + **글로벌 리더보드**.
 HTML5 Canvas + Vanilla JS + Firebase Firestore. 외부 빌드 없이 `index.html` 하나로 실행됩니다.
 
+▶ **라이브 데모**: https://yjb-3.vercel.app
 세부 기획은 [`PRD.md`](./PRD.md) 참조.
 
 ---

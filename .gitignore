@@ -9,3 +9,4 @@ firebase-debug.*.log
 .idea/
 .vscode/
 .omc/state/
+.vercel
