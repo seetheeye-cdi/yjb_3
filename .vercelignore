@@ -1,11 +1,9 @@
 .git
 .gitignore
 .omc
-firebase
-firebase.json
+supabase
 tests
 progress.txt
 PRD.md
-node_modules
 .DS_Store
 *.log

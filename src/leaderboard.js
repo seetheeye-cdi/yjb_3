@@ -1,106 +1,73 @@
-// Firebase global leaderboard module.
-// All Firebase IO is gated behind isConfigured() so the game still runs
-// (in local-only mode) when the developer has not set their own config.
+// Supabase global leaderboard module.
+//
+// Reads happen client-side via the publishable (anon) key; writes go through
+// the Vercel serverless function /api/submit-score, which uses the service
+// role key (server-only).
 
 import { CONFIG } from './config.js';
 
 // ---- Configuration ------------------------------------------------------
-// Replace these placeholders with your real Firebase project config to
-// enable the global leaderboard. See README.md for setup steps.
-export const FIREBASE_CONFIG = {
-  apiKey: 'TODO_FIREBASE_API_KEY',
-  authDomain: 'TODO.firebaseapp.com',
-  projectId: 'TODO_PROJECT_ID',
-  storageBucket: 'TODO.appspot.com',
-  messagingSenderId: 'TODO',
-  appId: 'TODO',
-};
+// Publishable / anon key — safe to embed in client bundles. RLS on the
+// `scores` table prevents this key from writing.
+export const SUPABASE_URL = 'https://vbxvedsnylxwdmzybcbq.supabase.co';
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_i89A1_q_C3t0kQkcfas0Sw_PS3FEXhf';
 
-// Cloud Function endpoint (HTTPS callable or rewrite). Set to a real URL
-// (e.g. https://us-central1-<project>.cloudfunctions.net/submitScore) to
-// enable server-side validation.
-export const SUBMIT_SCORE_URL = 'TODO_SUBMIT_SCORE_FUNCTION_URL';
+// Submission endpoint — Vercel serverless function (relative path keeps it
+// on the same origin → no CORS preflight).
+export const SUBMIT_SCORE_URL = '/api/submit-score';
 
-const SDK_BASE = 'https://www.gstatic.com/firebasejs/10.12.4';
-
-let _firebase = null; // lazily-initialized handle
+const ESM_BASE = 'https://esm.sh/@supabase/supabase-js@2.45.4';
+let _client = null;
 let _initPromise = null;
+let _sessionId = null;
 
 export function isConfigured() {
-  return (
-    !FIREBASE_CONFIG.apiKey.startsWith('TODO') &&
-    !FIREBASE_CONFIG.projectId.startsWith('TODO')
-  );
+  return Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 }
 
 export function isSubmitConfigured() {
-  return !SUBMIT_SCORE_URL.startsWith('TODO');
+  return Boolean(SUBMIT_SCORE_URL);
 }
 
-async function ensureInitialized() {
-  if (!isConfigured()) return null;
-  if (_firebase) return _firebase;
+async function ensureClient() {
+  if (_client) return _client;
   if (_initPromise) return _initPromise;
-
   _initPromise = (async () => {
-    const [{ initializeApp }, authMod, firestoreMod] = await Promise.all([
-      import(`${SDK_BASE}/firebase-app.js`),
-      import(`${SDK_BASE}/firebase-auth.js`),
-      import(`${SDK_BASE}/firebase-firestore.js`),
-    ]);
-    const app = initializeApp(FIREBASE_CONFIG);
-    const auth = authMod.getAuth(app);
-    const db = firestoreMod.getFirestore(app);
-    // Anonymous sign-in (best-effort)
+    const mod = await import(ESM_BASE);
+    const client = mod.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      realtime: { params: { eventsPerSecond: 5 } },
+    });
+    // Anonymous sign-in is best-effort; insertions go through /api anyway.
     try {
-      await authMod.signInAnonymously(auth);
+      const { data } = await client.auth.signInAnonymously();
+      _sessionId = data?.user?.id || null;
     } catch (e) {
-      console.warn('[leaderboard] anonymous auth failed:', e?.message || e);
+      // Project may not have anonymous sign-in enabled — that's fine.
     }
-    _firebase = { app, auth, db, authMod, firestoreMod };
-    return _firebase;
+    _client = client;
+    return client;
   })();
-
-  try {
-    return await _initPromise;
-  } catch (e) {
+  try { return await _initPromise; }
+  catch (e) {
     console.warn('[leaderboard] init failed:', e?.message || e);
     _initPromise = null;
     return null;
   }
 }
 
-// ---- Public API ---------------------------------------------------------
-
-/**
- * Submit a score via the Cloud Function endpoint. Falls back to a no-op
- * resolved Promise when not configured.
- *
- * @param {{nickname:string, score:number, durationMs:number, inputCount:number}} payload
- * @returns {Promise<{ok:boolean, reason?:string, rank?:number}>}
- */
 export async function submitScore(payload) {
-  if (!isSubmitConfigured()) {
-    return { ok: false, reason: 'leaderboard-offline' };
-  }
+  if (!isSubmitConfigured()) return { ok: false, reason: 'leaderboard-offline' };
   try {
-    const fb = await ensureInitialized();
-    const idToken = fb?.auth?.currentUser
-      ? await fb.auth.currentUser.getIdToken()
-      : null;
-    const headers = { 'Content-Type': 'application/json' };
-    if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-
     const res = await fetch(SUBMIT_SCORE_URL, {
       method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, sessionId: _sessionId }),
     });
+    let data = {};
+    try { data = await res.json(); } catch {}
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      return { ok: false, reason: `http-${res.status}`, message: text };
+      return { ok: false, reason: data.reason || `http-${res.status}`, message: data.detail };
     }
-    const data = await res.json().catch(() => ({}));
     return { ok: true, ...data };
   } catch (e) {
     return { ok: false, reason: e?.message || 'submit-failed' };
@@ -108,87 +75,74 @@ export async function submitScore(payload) {
 }
 
 /**
- * Subscribe to the realtime top-N leaderboard.
+ * Subscribe to top-N scores in realtime.
+ * Combines an initial fetch + a postgres_changes channel listener.
+ *
  * @param {number} limitN
- * @param {(rows: Array) => void} callback
+ * @param {(snap:{ok:boolean, rows?:Array, reason?:string}) => void} cb
  * @returns {() => void} unsubscribe
  */
-export function subscribeTopScores(limitN, callback) {
+export function subscribeTopScores(limitN, cb) {
   if (!isConfigured()) {
-    callback({ ok: false, reason: 'not-configured', rows: [] });
+    cb({ ok: false, reason: 'not-configured', rows: [] });
     return () => {};
   }
-
-  let unsub = () => {};
   let cancelled = false;
-  ensureInitialized().then((fb) => {
-    if (!fb || cancelled) {
-      callback({ ok: false, reason: 'init-failed', rows: [] });
+  let channel = null;
+
+  ensureClient().then(async (client) => {
+    if (!client || cancelled) {
+      cb({ ok: false, reason: 'init-failed', rows: [] });
       return;
     }
-    const { db, firestoreMod } = fb;
-    const { collection, query, orderBy, limit, onSnapshot } = firestoreMod;
-    const q = query(
-      collection(db, 'scores'),
-      orderBy('score', 'desc'),
-      orderBy('createdAt', 'asc'),
-      limit(limitN),
-    );
-    unsub = onSnapshot(
-      q,
-      (snap) => {
-        const rows = [];
-        snap.forEach((doc) => {
-          const d = doc.data();
-          rows.push({
-            id: doc.id,
-            nickname: d.nickname || 'anon',
-            score: Number(d.score) || 0,
-            createdAt: d.createdAt?.toMillis ? d.createdAt.toMillis() : Date.now(),
-            uid: d.uid || null,
-          });
-        });
-        callback({ ok: true, rows });
-      },
-      (err) => {
-        callback({ ok: false, reason: err?.code || 'listen-failed', rows: [] });
-      },
-    );
+    const refresh = async () => {
+      const { data, error } = await client
+        .from('scores')
+        .select('id, nickname, score, created_at')
+        .order('score', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(limitN);
+      if (cancelled) return;
+      if (error) {
+        cb({ ok: false, reason: error.code || 'fetch-failed', rows: [] });
+        return;
+      }
+      const rows = (data || []).map((r) => ({
+        id: r.id,
+        nickname: r.nickname,
+        score: Number(r.score) || 0,
+        createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+      }));
+      cb({ ok: true, rows });
+    };
+
+    await refresh();
+    channel = client
+      .channel('public:scores:top')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'scores' },
+        () => { refresh(); })
+      .subscribe();
   });
 
   return () => {
     cancelled = true;
-    try { unsub(); } catch {}
+    if (channel) { try { channel.unsubscribe(); } catch {} }
   };
 }
 
-/**
- * Returns my rank among all scores. Cheap rank by counting docs with
- * higher score (acceptable up to a few thousand entries — matches the PRD
- * Spark Plan target of ≈1k DAU).
- */
 export async function fetchMyRank(myScore) {
   if (!isConfigured()) return { ok: false, reason: 'not-configured' };
   try {
-    const fb = await ensureInitialized();
-    if (!fb) return { ok: false, reason: 'init-failed' };
-    const { db, firestoreMod } = fb;
-    const { collection, query, where, getCountFromServer, getDocs } = firestoreMod;
-    const aboveQ = query(collection(db, 'scores'), where('score', '>', myScore));
-    const totalQ = collection(db, 'scores');
-    const [aboveSnap, totalSnap] = await Promise.all([
-      getCountFromServer(aboveQ),
-      getCountFromServer(totalQ),
-    ]).catch(async () => {
-      // Fallback for SDKs without count aggregations: a (best-effort) plain read.
-      const all = await getDocs(totalQ);
-      let above = 0;
-      all.forEach((d) => { if ((d.data().score || 0) > myScore) above++; });
-      return [{ data: () => ({ count: above }) }, { data: () => ({ count: all.size }) }];
-    });
-    const rank = (aboveSnap.data().count || 0) + 1;
-    const total = totalSnap.data().count || 0;
-    return { ok: true, rank, total };
+    const client = await ensureClient();
+    if (!client) return { ok: false, reason: 'init-failed' };
+    const [{ count: above, error: e1 }, { count: total, error: e2 }] = await Promise.all([
+      client.from('scores').select('id', { count: 'exact', head: true })
+        .gt('score', Math.floor(myScore)),
+      client.from('scores').select('id', { count: 'exact', head: true }),
+    ]);
+    if (e1 || e2) return { ok: false, reason: (e1 || e2).code || 'rank-failed' };
+    return { ok: true, rank: (above || 0) + 1, total: total || 0 };
   } catch (e) {
     return { ok: false, reason: e?.message || 'rank-failed' };
   }
