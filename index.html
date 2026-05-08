@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>T-Rex Runner — 유정복 게임_3</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hud-row">
+      <h1>T-Rex Runner</h1>
+      <p class="hint">Space / ↑ to jump · ↓ to duck · Click / Tap also jumps</p>
+    </header>
+
+    <div class="stage">
+      <canvas
+        id="game"
+        width="900"
+        height="240"
+        role="img"
+        aria-label="T-Rex runner game canvas. Press space or up arrow to jump, down arrow to duck."
+        tabindex="0"
+      ></canvas>
+
+      <div id="overlay" class="overlay hidden" aria-live="polite">
+        <div class="panel">
+          <h2 id="overlay-title">PRESS SPACE TO START</h2>
+          <p id="overlay-sub"></p>
+          <div id="nickname-form" class="nickname-form hidden">
+            <label for="nickname-input">새 기록! 닉네임을 입력하세요 (3-12자)</label>
+            <input id="nickname-input" type="text" minlength="3" maxlength="12" autocomplete="off" />
+            <div class="row">
+              <button id="nickname-submit" type="button">제출</button>
+              <button id="nickname-skip" type="button">건너뛰기</button>
+            </div>
+            <p id="nickname-error" class="error" aria-live="assertive"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="leaderboard" aria-label="글로벌 리더보드">
+      <h3>🏆 Global Top 10</h3>
+      <p id="lb-status" class="lb-status">Loading…</p>
+      <ol id="lb-list"></ol>
+      <p id="lb-myrank" class="lb-myrank"></p>
+    </section>
+
+    <footer class="foot">
+      <p>
+        Built per <a href="./PRD.md">PRD.md</a> · Source on
+        <a href="https://github.com/seetheeye-cdi/yjb_3" target="_blank" rel="noopener">GitHub</a>
+      </p>
+    </footer>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+:root {
+  --bg: #f7f7f7;
+  --fg: #202124;
+  --muted: #5f6368;
+  --accent: #1a73e8;
+  --gold: #f5b301;
+  --silver: #b0b6bf;
+  --bronze: #cd7f32;
+  --new: #d93025;
+  --panel: #ffffff;
+  --border: #dadce0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard",
+    "Apple SD Gothic Neo", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.hud-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.hud-row h1 {
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stage {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+canvas#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: transparent;
+  outline: none;
+}
+
+canvas#game:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(2px);
+}
+
+.overlay.hidden { display: none; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-width: 280px;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.panel p { color: var(--muted); margin: 4px 0; }
+
+.nickname-form { margin-top: 12px; }
+.nickname-form.hidden { display: none; }
+.nickname-form label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.nickname-form input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nickname-form .row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.nickname-form button {
+  border: 1px solid var(--border);
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.nickname-form button#nickname-skip {
+  background: #fff;
+  color: var(--fg);
+}
+.nickname-form .error {
+  color: var(--new);
+  font-size: 13px;
+  min-height: 18px;
+  margin-top: 6px;
+}
+
+.leaderboard {
+  margin-top: 24px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.leaderboard h3 { margin: 0 0 8px; font-size: 16px; }
+.lb-status { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+
+.leaderboard ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.leaderboard li {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px dashed #eee;
+  font-size: 14px;
+}
+.leaderboard li .rank { font-weight: 700; color: var(--muted); }
+.leaderboard li.rank-1 .rank { color: var(--gold); }
+.leaderboard li.rank-2 .rank { color: var(--silver); }
+.leaderboard li.rank-3 .rank { color: var(--bronze); }
+.leaderboard li .nick { font-weight: 600; word-break: break-all; }
+.leaderboard li .score { font-variant-numeric: tabular-nums; color: var(--fg); }
+.leaderboard li .new {
+  font-size: 11px;
+  color: var(--new);
+  border: 1px solid var(--new);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+.leaderboard li.me { background: rgba(26,115,232,0.08); border-radius: 6px; }
+
+.lb-myrank {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.foot {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.foot a { color: var(--accent); text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .hud-row h1 { font-size: 18px; }
+  .hint { font-size: 12px; }
+}

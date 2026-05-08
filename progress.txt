@@ -1,0 +1,32 @@
+Iteration 1 — full implementation pass
+
+Implemented:
+- index.html, style.css: canvas + leaderboard panel + nickname overlay
+- src/config.js: PRD §5 tuning constants, day/night interval = 700, ptero unlock = 700
+- src/collision.js: aabb() + pad() helpers (strict-less-than, edge-touch is NOT overlap — verified by test)
+- src/dino.js: jump (vy=-12, g=0.6), duck (resizes box, bottom-aligned), fast-fall (g×2.4), state machine IDLE/RUN/JUMP/DUCK/DEAD
+- src/obstacles.js: Cactus 3 sizes + cluster variant; Pterodactyl 3 height bands (gated by PTERO_UNLOCK=700); Spawner with min-gap and difficulty-scaled interval
+- src/world.js: ground, pebbles, clouds, stars, moon, smooth day/night color blending
+- src/score.js: 0.6 score/frame ramp, hi-score localStorage at trex_hi_score, speed clamp 6→12, formatScore 5-digit pad
+- src/profanity.js: en+ko blocklist, validateNickname 3-12 chars + Unicode letter regex
+- src/leaderboard.js: lazy-loaded modular Firebase from gstatic CDN, anonymous Auth, onSnapshot top-10, fetchMyRank with count aggregation + read fallback, NEW badge < 24h
+- src/main.js: DPR-aware canvas, game loop (delta-time normalized to 60Hz), keyboard/touch/click input, nickname submit flow, graceful offline mode when config = TODO_*
+- firebase/firestore.rules: read-only on /scores from clients
+- firebase/functions/index.js: submitScore CF — auth verify, score/duration speed cap (25 sps), inputs ratio, max 99999, rate limit 5/min/IP, profanity, nickname regex
+- firebase/functions/package.json + firebase.json (Hosting + Functions + Firestore)
+- README.md: setup, controls, Firebase setup steps, CF contract, deploy commands
+- tests/logic.test.mjs: 10 assertions, all green
+- .gitignore
+
+Verification done in this iteration:
+- node --check passes for all 9 src/*.js files and firebase/functions/index.js
+- node tests/logic.test.mjs → 10/10 pass
+
+Open / next:
+- Initial git commit + push to https://github.com/seetheeye-cdi/yjb_3.git
+- Reviewer verification pass (architect/critic)
+
+Learnings:
+- Modular Firebase from gstatic CDN avoids any bundler — fits "single HTML" PRD goal
+- AABB strict-less-than means edge-touching boxes don't collide; matches Chrome dino feel (gives 1px grace at edges)
+- Day/night ramp of 80 score points feels smoother than instant flip

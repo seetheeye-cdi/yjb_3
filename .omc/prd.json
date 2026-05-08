@@ -1,0 +1,138 @@
+{
+  "task": "T-Rex Runner Clone game per PRD.md, deployed to GitHub repo yjb_3",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Project scaffold + index.html boots",
+      "priority": 1,
+      "passes": false,
+      "acceptanceCriteria": [
+        "index.html exists at project root and contains <canvas id=\"game\">",
+        "src/main.js is loaded as ES module from index.html",
+        "Opening index.html in a browser shows a 600x150 canvas with ground line drawn",
+        "No console errors on initial load (verified by syntax-check via node --check on every JS file)"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Dino character with jump + duck physics",
+      "priority": 2,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Dino class implemented in src/dino.js with x, y, vy, state fields",
+        "Space/ArrowUp triggers jump with initial vy=-12, gravity 0.6 applied each frame",
+        "ArrowDown while in air triggers fast-fall (gravity multiplier increased)",
+        "ArrowDown while on ground sets ducking state with reduced hitbox height",
+        "Dino lands back on ground line and resets to running state",
+        "node --check src/dino.js passes"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Obstacle spawn system (cactus + pterodactyl)",
+      "priority": 3,
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/obstacles.js implements Cactus (small/medium/large) and Pterodactyl classes",
+        "Obstacles spawn at right edge with randomized interval (min distance enforced)",
+        "Obstacles scroll left at scrollSpeed and despawn when off-screen left",
+        "Pterodactyl only spawns when score >= 700",
+        "Pterodactyl spawns at one of 3 height bands",
+        "node --check src/obstacles.js passes"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "AABB collision detection + game over",
+      "priority": 4,
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/collision.js exports aabb(a,b) returning boolean for AABB overlap",
+        "Collision detected between dino hitbox (shrunk for fairness) and any obstacle hitbox",
+        "On collision, game state transitions to 'gameover' and loop pauses physics",
+        "GAME OVER text rendered on canvas",
+        "Space key triggers restart from 'gameover' state",
+        "node --check src/collision.js passes"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Score, hi-score localStorage, day/night cycle",
+      "priority": 5,
+      "passes": false,
+      "acceptanceCriteria": [
+        "Score increments by ~0.1 per frame, displayed top-right padded to 5 digits",
+        "Hi score persisted in localStorage under key 'trex_hi_score'",
+        "Hi score restored on page reload and shown as 'HI 12345' to left of current score",
+        "Background colors invert every 700 score points (day <-> night)",
+        "Night mode renders moon and stars layers",
+        "Scroll speed ramps from 6 to max 12 px/frame as score increases"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Firebase global leaderboard integration (placeholder config)",
+      "priority": 6,
+      "passes": false,
+      "acceptanceCriteria": [
+        "src/leaderboard.js imports Firebase modular SDK from CDN (gstatic.com/firebasejs)",
+        "Anonymous Auth + Firestore initialized with config object containing TODO placeholders",
+        "submitScore(nickname, score, durationMs, inputCount) calls a Cloud Function endpoint (URL placeholder) and falls back to local-only when not configured",
+        "subscribeTopScores(limit, callback) attaches realtime onSnapshot listener to top scores by score desc",
+        "On game over, if score qualifies (score > current Top10 minimum or fewer than 10 entries), nickname prompt UI is shown; nickname validated 3-12 chars with profanity blocklist",
+        "Leaderboard panel renders Top 10 with rank, nickname, score; current player's row highlighted; entries within 24h show NEW badge",
+        "Code degrades gracefully when Firebase config is unset (game still playable, leaderboard panel shows 'Leaderboard offline — set Firebase config to enable')",
+        "node --check src/leaderboard.js passes"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Mobile + accessibility polish",
+      "priority": 7,
+      "passes": false,
+      "acceptanceCriteria": [
+        "touchstart handler on canvas triggers jump (passive: false, preventDefault)",
+        "Mouse click on canvas also triggers jump",
+        "ARIA label on canvas describing the game state",
+        "Viewport meta tag for mobile present in index.html"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "README.md and project metadata",
+      "priority": 8,
+      "passes": false,
+      "acceptanceCriteria": [
+        "README.md exists at project root",
+        "README explains how to run (open index.html or `npx serve`), controls, Firebase setup steps",
+        "README links to PRD.md",
+        "README includes section on Cloud Function expected request/response shape"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Firebase backend skeleton (rules + cloud function source)",
+      "priority": 9,
+      "passes": false,
+      "acceptanceCriteria": [
+        "firebase/firestore.rules file exists with read-allow / write-deny policy (only via CF)",
+        "firebase/functions/index.js implements submitScore Cloud Function with: speed validation (score/duration <= 25/sec), nickname length 3-12, profanity filter, max score cap 99999, basic IP rate limit comment",
+        "firebase/functions/package.json declares firebase-admin, firebase-functions deps",
+        "node --check firebase/functions/index.js passes"
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "Git init + push to remote https://github.com/seetheeye-cdi/yjb_3.git",
+      "priority": 10,
+      "passes": false,
+      "acceptanceCriteria": [
+        "git repo initialized at project root with main branch",
+        ".gitignore excludes node_modules, .DS_Store, firebase-debug.log",
+        "Initial commit created with all source files",
+        "Remote 'origin' set to https://github.com/seetheeye-cdi/yjb_3.git",
+        "git push -u origin main succeeds (verified by `git ls-remote origin main` returning HEAD)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+*.log
+.env
+.env.*
+.idea/
+.vscode/
+.omc/state/
